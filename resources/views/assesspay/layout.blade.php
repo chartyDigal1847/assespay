@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'EntryEase') — DEORIS</title>
-    <link rel="stylesheet" href="{{ asset('css/assesspay.css') }}">
+    <title>@yield('title', 'AssessPay') — DEORIS</title>
+    <link rel="stylesheet" href="{{ asset('css/assesspay.css') }}?v={{ filemtime(public_path('css/assesspay.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/deoris-module-theme.css') }}?v={{ filemtime(public_path('css/deoris-module-theme.css')) }}">
     <script>
         window.ASSESSPAY_API    = "{{ url('/api/v1') }}";
         window.ASSESSPAY_ROLE   = "{{ session('sso_role', session('assesspay_role', 'guest')) }}";

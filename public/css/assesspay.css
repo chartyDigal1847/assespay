@@ -1,49 +1,41 @@
 :root {
-    --ap-primary: #6b3f35;
-    --ap-primary-soft: #f7ede8;
-    --ap-primary-light: #8a5a4b;
-    --ap-primary-dark: #4f2b24;
-    --ap-accent: #c4936b;
-    --ap-bg: #faf6f3;
-    --ap-card: rgba(255, 255, 255, 0.78);
-    --ap-card-strong: #fffdfb;
-    --ap-text: #2d1f1a;
-    --ap-muted: #846a60;
-    --ap-border: rgba(107, 63, 53, 0.2);
-    --ap-success: #2f7d4a;
-    --ap-success-bg: #e4f4ea;
-    --ap-warning: #b8702c;
-    --ap-warning-bg: #fff1de;
-    --ap-danger: #ad3d31;
-    --ap-radius: 18px;
-    --ap-shadow: 0 12px 40px rgba(91, 54, 42, 0.12);
-    --ap-shadow-lg: 0 24px 55px rgba(79, 43, 36, 0.16);
+    --ap-primary: #7c3041;
+    --ap-primary-soft: #f9eef1;
+    --ap-primary-light: #9b3d50;
+    --ap-primary-dark: #5c2230;
+    --ap-accent: #c9a84c;
+    --ap-bg: #f4f6f9;
+    --ap-card: #ffffff;
+    --ap-card-strong: #ffffff;
+    --ap-text: #1e2530;
+    --ap-muted: #6b7a8d;
+    --ap-border: #e8ecf0;
+    --ap-success: #16a34a;
+    --ap-success-bg: #f0fdf4;
+    --ap-warning: #d97706;
+    --ap-warning-bg: #fffbeb;
+    --ap-danger: #dc2626;
+    --ap-radius: 12px;
+    --ap-shadow: 0 1px 4px rgba(15, 22, 35, 0.06), 0 8px 24px rgba(15, 22, 35, 0.08);
+    --ap-shadow-lg: 0 8px 22px rgba(15, 22, 35, 0.1), 0 22px 48px rgba(15, 22, 35, 0.12);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body.ap-body {
-    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background:
-        radial-gradient(circle at top, rgba(196, 147, 107, 0.16), transparent 20%),
-        radial-gradient(circle at bottom right, rgba(107, 63, 53, 0.16), transparent 25%),
-        linear-gradient(180deg, #fcfaf8 0%, #f6f0eb 40%, #f2ebe6 100%);
+        radial-gradient(circle at top left, rgba(124, 48, 65, 0.06), transparent 32rem),
+        linear-gradient(180deg, #f8fafc 0%, var(--ap-bg) 45%, #eef2f7 100%);
     color: var(--ap-text);
     min-height: 100vh;
-    line-height: 1.5;
+    line-height: 1.6;
+    font-size: 15px;
     position: relative;
 }
 
 body.ap-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background:
-        linear-gradient(rgba(255,255,255,0.28), rgba(255,255,255,0.1)),
-        radial-gradient(circle at 20% 10%, rgba(196, 147, 107, 0.18), transparent 14%),
-        radial-gradient(circle at 80% 0%, rgba(107, 63, 53, 0.14), transparent 18%);
-    z-index: -1;
+    display: none;
 }
 
 /* —— Shell (SSO loading) —— */
@@ -51,10 +43,10 @@ body.ap-shell-body {
     min-height: 100vh;
     display: grid;
     place-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background:
-        radial-gradient(circle at top, rgba(196, 147, 107, 0.2), transparent 20%),
-        radial-gradient(circle at bottom, rgba(107, 63, 53, 0.18), transparent 28%),
-        linear-gradient(145deg, #fcfaf8 0%, #f8f1eb 48%, #f0e4dc 100%);
+        radial-gradient(circle at top left, rgba(124, 48, 65, 0.08), transparent 32rem),
+        linear-gradient(180deg, #f8fafc 0%, var(--ap-bg) 48%, #eef2f7 100%);
 }
 
 .ap-shell { width: 100%; max-width: 420px; padding: 1.5rem; }
@@ -107,17 +99,18 @@ body.ap-shell-body {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem 1.5rem;
-    margin: 1rem 1rem 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(148, 163, 184, 0.24);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 16px 40px rgba(14, 116, 144, 0.12);
+    padding: 0 20px;
+    margin: 0;
+    min-height: 64px;
+    border-radius: 0;
+    background: linear-gradient(135deg, #7c3041 0%, #9b3d50 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 12px rgba(124, 48, 65, 0.22);
     position: sticky;
-    top: 0.75rem;
+    top: 0;
     z-index: 50;
     flex-wrap: wrap;
+    color: #fff;
 }
 
 .ap-brand-wrap { display: flex; align-items: center; }
@@ -166,27 +159,26 @@ body.ap-shell-body {
 .ap-nav { display: flex; gap: 0.35rem; flex: 1; flex-wrap: wrap; justify-content: center; }
 
 .ap-nav a {
-    padding: 0.55rem 0.9rem;
-    border-radius: 999px;
+    padding: 7px 12px;
+    border-radius: 8px;
     text-decoration: none;
-    color: var(--ap-muted);
-    font-size: 0.78rem;
-    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 600;
     letter-spacing: 0.01em;
-    transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+    transition: background 0.18s, color 0.18s;
 }
 
 .ap-nav a:hover {
-    background: rgba(37, 99, 235, 0.09);
-    color: var(--ap-primary);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
 }
 
 .ap-nav a.active {
-    background: linear-gradient(180deg, rgba(107, 63, 53, 0.16), rgba(196, 147, 107, 0.18));
-    color: var(--ap-primary-dark);
-    box-shadow: inset 0 0 0 1px rgba(107, 63, 53, 0.18);
-    font-weight: 800;
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    font-weight: 700;
 }
 
 .ap-user-chip {
