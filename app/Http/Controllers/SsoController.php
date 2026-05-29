@@ -13,6 +13,27 @@ class SsoController extends Controller
 {
     public function __construct(protected PortalUserService $portalUsers) {}
 
+    private function debugLog(string $hypothesisId, string $location, string $message, array $data = []): void
+    {
+        try {
+            $payload = json_encode([
+                'sessionId' => '0cc008',
+                'runId' => 'run6',
+                'hypothesisId' => $hypothesisId,
+                'location' => $location,
+                'message' => $message,
+                'data' => $data,
+                'timestamp' => (int) floor(microtime(true) * 1000),
+            ], JSON_UNESCAPED_SLASHES);
+            if ($payload === false) {
+                return;
+            }
+            file_put_contents('C:/xampp/htdocs/deoris/debug-0cc008.log', $payload . PHP_EOL, FILE_APPEND | LOCK_EX);
+        } catch (\Throwable $e) {
+            // Ignore debug log failures.
+        }
+    }
+
     /**
      * POST /sso/exchange — validate token with DEORIS Auth, hydrate session.
      */
@@ -23,6 +44,13 @@ class SsoController extends Controller
                 'token' => 'required|string|max:500',
                 'embedded' => 'sometimes|boolean',
             ]);
+            // #region agent log
+            $this->debugLog('H17', 'AssessPay\\SsoController::exchange:entry', 'assesspay exchange called', [
+                'hasToken' => !empty($validated['token']),
+                'embedded' => (bool) ($validated['embedded'] ?? false),
+                'sessionId' => $request->session()->getId(),
+            ]);
+            // #endregion
 
             $tokenString = $validated['token'];
             $embedded = $validated['embedded'] ?? false;
@@ -45,6 +73,12 @@ class SsoController extends Controller
                     .config('assesspay.portal.sso_exchange_path', '/api/v1/sso/exchange'),
                 ['token' => $tokenString]
             );
+            // #region agent log
+            $this->debugLog('H17', 'AssessPay\\SsoController::exchange:portalResponse', 'assesspay portal exchange response', [
+                'status' => $response->status(),
+                'ok' => $response->ok(),
+            ]);
+            // #endregion
 
             if (! $response->ok()) {
                 Log::warning('[AssessPay][SSO] Token validation failed', [
@@ -57,6 +91,11 @@ class SsoController extends Controller
             $data = $response->json();
 
             if (empty($data['user']['id'])) {
+                // #region agent log
+                $this->debugLog('H17', 'AssessPay\\SsoController::exchange:invalidPayload', 'assesspay payload missing user id', [
+                    'hasUser' => !empty($data['user']),
+                ]);
+                // #endregion
                 return response()->json(['success' => false, 'error' => 'missing_user'], 401);
             }
 
@@ -72,6 +111,13 @@ class SsoController extends Controller
 
             $this->portalUsers->hydrateSession($request, $portalUser, $embedded);
             $this->portalUsers->ensureStudentRecord($request);
+            // #region agent log
+            $this->debugLog('H17', 'AssessPay\\SsoController::exchange:sessionHydrated', 'assesspay session hydrated after exchange', [
+                'ssoId' => (string) $portalUser['id'],
+                'role' => $mappedRole,
+                'sessionId' => $request->session()->getId(),
+            ]);
+            // #endregion
 
             Log::info('[AssessPay][SSO] Authenticated via DEORIS', [
                 'portal_id' => $portalUser['id'],

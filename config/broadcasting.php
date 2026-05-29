@@ -1,5 +1,17 @@
 <?php
 
+$broadcastDefault = env('BROADCAST_CONNECTION', 'log');
+if (
+    $broadcastDefault === 'reverb'
+    && (
+        ! is_string(env('REVERB_APP_KEY')) || trim(env('REVERB_APP_KEY')) === ''
+        || ! is_string(env('REVERB_APP_SECRET')) || trim(env('REVERB_APP_SECRET')) === ''
+        || ! is_string(env('REVERB_APP_ID')) || trim(env('REVERB_APP_ID')) === ''
+    )
+) {
+    $broadcastDefault = 'log';
+}
+
 return [
 
     /*
@@ -8,7 +20,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'default' => env('BROADCAST_CONNECTION', 'log'),
+    'default' => $broadcastDefault,
 
     /*
     |--------------------------------------------------------------------------

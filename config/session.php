@@ -2,6 +2,19 @@
 
 use Illuminate\Support\Str;
 
+$sessionDriver = env('SESSION_DRIVER', 'database');
+
+// Prevent hard 500s when DB-backed sessions are configured but DB creds are missing.
+if (
+    $sessionDriver === 'database'
+    && (
+        ! is_string(env('DB_USERNAME')) || trim(env('DB_USERNAME')) === ''
+        || ! is_string(env('DB_DATABASE')) || trim(env('DB_DATABASE')) === ''
+    )
+) {
+    $sessionDriver = 'file';
+}
+
 return [
 
     /*
@@ -10,7 +23,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => $sessionDriver,
 
     /*
     |--------------------------------------------------------------------------

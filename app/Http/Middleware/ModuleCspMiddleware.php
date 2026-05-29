@@ -23,6 +23,7 @@ class ModuleCspMiddleware
         $reverbPort = config('broadcasting.connections.reverb.options.port', 8084);
         $reverbWss  = 'wss://' . $reverbHost . ':' . $reverbPort;
         $reverbHttp = 'https://' . $reverbHost . ':' . $reverbPort;
+        $debugConnectSrc = app()->hasDebugModeEnabled() ? ' http://127.0.0.1:7481' : '';
 
         $csp = implode('; ', [
             "default-src 'self'",
@@ -32,7 +33,7 @@ class ModuleCspMiddleware
             "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com",
             "img-src 'self' data:",
             // Allow portal API calls, Reverb WebSocket, and Reverb HTTP auth endpoint
-            "connect-src 'self' {$portalUrl} {$reverbWss} {$reverbHttp} https://cdn.jsdelivr.net",
+            "connect-src 'self' {$portalUrl} {$reverbWss} {$reverbHttp} https://cdn.jsdelivr.net{$debugConnectSrc}",
             "frame-ancestors {$portalUrl}",   // CRITICAL — allows portal to iframe this module
             "frame-src 'self'",
             "object-src 'none'",
