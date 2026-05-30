@@ -156,17 +156,34 @@ body.ap-shell-body {
     text-transform: uppercase;
 }
 
-.ap-nav { display: flex; gap: 0.35rem; flex: 1; flex-wrap: wrap; justify-content: center; }
+.ap-nav {
+    display: flex;
+    gap: 0.35rem;
+    flex: 1;
+    flex-wrap: nowrap;
+    justify-content: center;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.ap-nav::-webkit-scrollbar {
+    display: none;
+}
 
 .ap-nav a {
+    position: relative;
+    flex: 0 0 auto;
     padding: 7px 12px;
     border-radius: 8px;
     text-decoration: none;
     color: rgba(255, 255, 255, 0.9);
     font-size: 0.875rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.01em;
-    transition: background 0.18s, color 0.18s;
+    white-space: nowrap;
+    outline: 0;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
 }
 
 .ap-nav a:hover {
@@ -174,11 +191,29 @@ body.ap-shell-body {
     color: #fff;
 }
 
+.ap-nav a:active {
+    transform: none;
+}
+
 .ap-nav a.active {
     background: rgba(255, 255, 255, 0.22);
     color: #fff;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-    font-weight: 700;
+}
+
+.ap-nav a.active::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 4px;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.ap-nav a:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
 }
 
 .ap-user-chip {
@@ -551,7 +586,21 @@ body.ap-shell-body {
 }
 
 @media (max-width: 640px) {
-    .ap-header { flex-direction: column; align-items: flex-start; }
+    .ap-header {
+        align-items: stretch;
+        padding: 0.65rem 0.85rem;
+        min-height: auto;
+    }
+    .ap-nav {
+        width: 100%;
+        justify-content: flex-start;
+        padding-bottom: 0.15rem;
+        scroll-padding-inline: 0.85rem;
+    }
+    .ap-nav a {
+        padding: 8px 12px;
+        border-radius: 999px;
+    }
     .ap-main { padding: 1rem; }
     .ap-card .ap-value { font-size: 1.4rem; }
 }
