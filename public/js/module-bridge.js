@@ -101,23 +101,6 @@
     }).catch(function () {});
   }
 
-  function checkExistingSession() {
-    return fetch(window.location.origin + "/api/sso/heartbeat", {
-      method: "GET",
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("no_session");
-        return res.json();
-      })
-      .then(function (data) {
-        if (data.valid && data.user) return data.user;
-        throw new Error("session_invalid");
-      })
-      .catch(function () { return null; });
-  }
-
   /**
    * Exchange token directly with DEORIS — same as EnrollEase pattern.
    * DEORIS validates the Sanctum token and returns user identity.
@@ -191,25 +174,16 @@
     return;
   }
 
-  console.log("[module-bridge] Checking AssessPay session…");
-  checkExistingSession().then(function (user) {
-    if (user) {
-      console.log("[module-bridge] Session restored.");
-      finishReady(user);
-      return;
-    }
-
-    console.log("[module-bridge] Requesting SSO token from portal…");
-    timeoutId = window.setTimeout(function () {
-      finishError(
-        "Sign-in timed out. Close this tab and open AssessPay again from DEORIS.",
-        "sso_timeout"
-      );
-    }, SSO_TIMEOUT_MS);
-
-    window.parent.postMessage(
-      { type: "REQUEST_SSO", requestId: requestId },
-      PORTAL_ORIGIN
+  console.log("[module-bridge] Requesting SSO token from portal…");
+  timeoutId = window.setTimeout(function () {
+    finishError(
+      "Sign-in timed out. Close this tab and open AssessPay again from DEORIS.",
+      "sso_timeout"
     );
-  });
+  }, SSO_TIMEOUT_MS);
+
+  window.parent.postMessage(
+    { type: "REQUEST_SSO", requestId: requestId },
+    PORTAL_ORIGIN
+  );
 })();
