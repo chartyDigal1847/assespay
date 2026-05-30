@@ -99,17 +99,31 @@ class PortalUserService
             return null;
         }
 
-        $student = Student::updateOrCreate(
-            ['portal_user_id' => $portalId],
-            [
-                'student_id' => 'DEORIS-'.$portalId,
-                'name' => $name,
-                'email' => $email,
-                'program' => '—',
-                'year_level' => '—',
-                'status' => 'active',
-            ]
-        );
+        $attributes = [
+            'portal_user_id' => $portalId,
+            'student_id' => 'DEORIS-'.$portalId,
+            'name' => $name,
+            'email' => $email,
+            'program' => '—',
+            'year_level' => '—',
+            'status' => 'active',
+        ];
+
+        // Portal IDs can be reseeded during deploy/testing. Reconcile by email
+        // before creating a new row so SSO cannot hit duplicate local students.
+        $student = Student::query()->where('portal_user_id', $portalId)->first()
+            ?? Student::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->first();
+
+        if ($student !== null) {
+            if ($student->trashed()) {
+                $student->restore();
+            }
+
+            $student->fill($attributes);
+            $student->save();
+        } else {
+            $student = Student::create($attributes);
+        }
 
         app(BillingAccountService::class)->ensureForStudent($student);
 
