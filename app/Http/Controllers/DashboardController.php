@@ -154,7 +154,9 @@ class DashboardController extends Controller
                     'name' => $deorisStudent['name'],
                     'email' => $email ?: null,
                     'program' => $deorisStudent['program'] ?: 'Enrolled',
-                    'year_level' => $deorisStudent['grade_level'] ?: null,
+                    'year_level' => trim((string) ($deorisStudent['grade_level'] ?? '')) !== ''
+                        ? trim((string) $deorisStudent['grade_level'])
+                        : '—',
                     'status' => 'active',
                 ];
 
