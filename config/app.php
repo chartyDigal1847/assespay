@@ -56,6 +56,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | DEORIS Portal URL
+    |--------------------------------------------------------------------------
+    |
+    | Used by module CSP and SSO bridge loading when AssessPay is embedded in
+    | the DEORIS portal.
+    |
+    */
+
+    'portal_url' => env('APP_PORTAL_URL', env('PORTAL_BASE_URL', 'https://deoris.test')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
