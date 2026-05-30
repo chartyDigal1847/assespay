@@ -55,19 +55,6 @@ class SsoController extends Controller
             $tokenString = $validated['token'];
             $embedded = $validated['embedded'] ?? false;
 
-            if ($this->portalUsers->isAuthenticated($request)) {
-                $user = $this->portalUsers->sessionUser($request);
-                $role = $this->portalUsers->role($request);
-                $dashboardRoute = $this->portalUsers->dashboardRouteForRole($role);
-
-                return response()->json([
-                    'success'  => true,
-                    'user'     => $user,
-                    'embedded' => $request->session()->get(PortalUserService::SESSION_EMBEDDED, $embedded),
-                    'redirect' => route($dashboardRoute),
-                ]);
-            }
-
             $response = $this->deorisHttp($tokenString)->post(
                 rtrim(config('services.auth.url', config('assesspay.portal.auth_url')), '/')
                     .config('assesspay.portal.sso_exchange_path', '/api/v1/sso/exchange'),
