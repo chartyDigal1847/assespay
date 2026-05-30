@@ -349,4 +349,47 @@ class PaymentServiceTest extends TestCase
             ->assertJsonCount(0, 'results.billing')
             ->assertJsonCount(0, 'results.students');
     }
+
+    public function test_reversing_paid_payment_reopens_payable_balance(): void
+    {
+        $student = Student::create([
+            'portal_user_id' => '2',
+            'student_id' => 'DEORIS-2',
+            'name' => 'Student',
+            'program' => 'Grade 7',
+            'year_level' => '7',
+            'email' => 'student@example.com',
+            'status' => 'active',
+        ]);
+        $account = app(BillingAccountService::class)->ensureForStudent($student);
+        $record = TuitionRecord::create([
+            'student_id' => $student->id,
+            'billing_account_id' => $account->id,
+            'school_year' => '2026-2027',
+            'term' => 'Annual',
+            'description' => 'Reversible payable',
+            'tuition_amount' => 5000,
+            'misc_amount' => 0,
+            'other_amount' => 0,
+            'total_amount' => 5000,
+            'status' => PaymentStatus::Pending,
+        ]);
+        app(BalanceService::class)->recalculate($account);
+
+        $payment = app(PaymentService::class)->submit([
+            'student_id' => $student->id,
+            'tuition_record_id' => $record->id,
+            'amount' => 5000,
+            'method' => 'online',
+        ], '2', 'student');
+        app(PaymentService::class)->confirm($payment, '2');
+
+        $this->assertSame(PaymentStatus::Paid, $record->fresh()->status);
+        $this->assertSame('0.00', $account->balance->fresh()->current_balance);
+
+        app(PaymentService::class)->reverse($payment->fresh(), '7', 'Duplicate payment');
+
+        $this->assertSame(PaymentStatus::Pending, $record->fresh()->status);
+        $this->assertSame('5000.00', $account->balance->fresh()->current_balance);
+    }
 }

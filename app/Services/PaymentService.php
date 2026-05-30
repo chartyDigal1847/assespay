@@ -130,7 +130,11 @@ class PaymentService
         $total = (float) $record->total_amount;
 
         $record->update([
-            'status' => $paid >= $total ? PaymentStatus::Paid : PaymentStatus::PartiallyPaid,
+            'status' => match (true) {
+                $paid <= 0 => PaymentStatus::Pending,
+                $paid >= $total => PaymentStatus::Paid,
+                default => PaymentStatus::PartiallyPaid,
+            },
         ]);
     }
 
@@ -140,6 +144,7 @@ class PaymentService
             $before = $payment->toArray();
 
             $payment->update(['status' => PaymentStatus::Refunded]);
+            $this->updateTuitionRecordStatus($payment);
             $this->balances->recalculate($payment->billingAccount);
 
             $this->audit($payment, 'payment.reversed', $before, $payment->fresh()->toArray(), $cashierPortalId, ['reason' => $reason]);
