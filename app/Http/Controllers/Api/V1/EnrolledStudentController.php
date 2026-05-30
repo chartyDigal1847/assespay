@@ -57,17 +57,33 @@ class EnrolledStudentController extends Controller
         }
 
         $result = DB::transaction(function () use ($data, $deorisStudent, $tuition, $misc, $other) {
-            $student = Student::updateOrCreate(
-                ['portal_user_id' => $deorisStudent['id']],
-                [
-                    'student_id' => $this->students->studentNumberFor($deorisStudent),
-                    'name' => $deorisStudent['name'],
-                    'email' => $deorisStudent['email'] ?: null,
-                    'program' => $deorisStudent['program'] ?? 'Enrolled',
-                    'year_level' => $deorisStudent['grade_level'] ?? '—',
-                    'status' => 'active',
-                ]
-            );
+            $studentNumber = $this->students->studentNumberFor($deorisStudent);
+            $email = strtolower((string) ($deorisStudent['email'] ?? ''));
+            $student = Student::withTrashed()
+                ->where('portal_user_id', $deorisStudent['id'])
+                ->when($email !== '', fn ($query) => $query->orWhereRaw('LOWER(email) = ?', [$email]))
+                ->orWhere('student_id', $studentNumber)
+                ->first();
+
+            $studentData = [
+                'portal_user_id' => $deorisStudent['id'],
+                'student_id' => $studentNumber,
+                'name' => $deorisStudent['name'],
+                'email' => $email ?: null,
+                'program' => $deorisStudent['program'] ?? 'Enrolled',
+                'year_level' => $deorisStudent['grade_level'] ?? '—',
+                'status' => 'active',
+            ];
+
+            if ($student) {
+                if ($student->trashed()) {
+                    $student->restore();
+                }
+
+                $student->fill($studentData)->save();
+            } else {
+                $student = Student::create($studentData);
+            }
 
             $account = $this->accounts->ensureForStudent($student);
             $schoolYear = $data['school_year'] ?: now()->year.'-'.now()->addYear()->year;

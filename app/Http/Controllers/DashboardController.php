@@ -140,32 +140,35 @@ class DashboardController extends Controller
 
         try {
             [$student, $record] = DB::transaction(function () use ($data, $directory, $deorisStudent) {
-                $student = Student::updateOrCreate(
-                    ['portal_user_id' => $deorisStudent['id']],
-                    [
-                        'student_id' => $directory->studentNumberFor($deorisStudent),
-                        'name' => $deorisStudent['name'],
-                        'email' => $deorisStudent['email'],
-                        'program' => $deorisStudent['program'] ?: 'Enrolled',
-                        'year_level' => $deorisStudent['grade_level'] ?: null,
-                        'status' => 'active',
-                    ]
-                );
+                $studentNumber = $directory->studentNumberFor($deorisStudent);
+                $email = strtolower((string) $deorisStudent['email']);
+                $student = Student::withTrashed()
+                    ->where('portal_user_id', $deorisStudent['id'])
+                    ->when($email !== '', fn ($query) => $query->orWhereRaw('LOWER(email) = ?', [$email]))
+                    ->orWhere('student_id', $studentNumber)
+                    ->first();
+
+                $studentData = [
+                    'portal_user_id' => $deorisStudent['id'],
+                    'student_id' => $studentNumber,
+                    'name' => $deorisStudent['name'],
+                    'email' => $email ?: null,
+                    'program' => $deorisStudent['program'] ?: 'Enrolled',
+                    'year_level' => $deorisStudent['grade_level'] ?: null,
+                    'status' => 'active',
+                ];
+
+                if ($student) {
+                    if ($student->trashed()) {
+                        $student->restore();
+                    }
+
+                    $student->fill($studentData)->save();
+                } else {
+                    $student = Student::create($studentData);
+                }
 
                 $account = app(BillingAccountService::class)->ensureForStudent($student);
-
-                $hasExistingPayable = TuitionRecord::where('student_id', $student->id)
-                    ->whereNotIn('status', [
-                        PaymentStatus::Cancelled,
-                        PaymentStatus::Refunded,
-                    ])
-                    ->exists();
-
-                if ($hasExistingPayable) {
-                    throw ValidationException::withMessages([
-                        'source_id' => 'This student already has a payable record in AssessPay.',
-                    ]);
-                }
 
                 $tuition = (float) $data['tuition_amount'];
                 $misc = (float) ($data['misc_amount'] ?? 0);
@@ -270,56 +273,7 @@ class DashboardController extends Controller
 
     protected function assignableStudents(array $eligibleStudents): array
     {
-        $portalIds = collect($eligibleStudents)
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
-            ->filter()
-            ->values();
-        $emails = collect($eligibleStudents)
-            ->pluck('email')
-            ->map(fn ($email) => strtolower((string) $email))
-            ->filter()
-            ->values();
-
-        if ($portalIds->isEmpty() && $emails->isEmpty()) {
-            return $eligibleStudents;
-        }
-
-        $studentsWithPayables = Student::query()
-            ->where(function ($query) use ($portalIds, $emails) {
-                if ($portalIds->isNotEmpty()) {
-                    $query->whereIn('portal_user_id', $portalIds);
-                }
-
-                if ($emails->isNotEmpty()) {
-                    $method = $portalIds->isNotEmpty() ? 'orWhereIn' : 'whereIn';
-                    $query->{$method}(DB::raw('LOWER(email)'), $emails);
-                }
-            })
-            ->whereHas('tuitionRecords', function ($query) {
-                $query->whereNotIn('status', [
-                    PaymentStatus::Cancelled,
-                    PaymentStatus::Refunded,
-                ]);
-            })
-            ->get(['portal_user_id', 'email']);
-
-        $blockedPortalIds = $studentsWithPayables
-            ->pluck('portal_user_id')
-            ->map(fn ($id) => (string) $id)
-            ->filter()
-            ->all();
-        $blockedEmails = $studentsWithPayables
-            ->pluck('email')
-            ->map(fn ($email) => strtolower((string) $email))
-            ->filter()
-            ->all();
-
-        return collect($eligibleStudents)
-            ->reject(fn ($student) => in_array((string) $student['id'], $blockedPortalIds, true)
-                || in_array(strtolower((string) $student['email']), $blockedEmails, true))
-            ->values()
-            ->all();
+        return $eligibleStudents;
     }
 
     protected function sharedMetrics(): array
