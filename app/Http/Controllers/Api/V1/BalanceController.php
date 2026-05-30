@@ -23,16 +23,19 @@ class BalanceController extends Controller
         }
         if (PortalSession::role($request) === 'student') {
             $studentId = PortalSession::studentId($request);
-            if ($studentId) {
-                $query->where('student_id', $studentId);
-            }
+            abort_unless($studentId, 403, 'Student account is not available.');
+            $query->where('student_id', $studentId);
         }
 
         return BalanceResource::collection($query->paginate($request->integer('per_page', 15)));
     }
 
-    public function show(Balance $balance)
+    public function show(Request $request, Balance $balance)
     {
+        if (PortalSession::role($request) === 'student') {
+            abort_unless((int) PortalSession::studentId($request) === (int) $balance->student_id, 404);
+        }
+
         return new BalanceResource($balance->load('student'));
     }
 

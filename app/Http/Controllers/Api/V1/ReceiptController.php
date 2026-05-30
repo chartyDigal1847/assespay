@@ -19,16 +19,19 @@ class ReceiptController extends Controller
         }
         if (PortalSession::role($request) === 'student') {
             $studentId = PortalSession::studentId($request);
-            if ($studentId) {
-                $query->where('student_id', $studentId);
-            }
+            abort_unless($studentId, 403, 'Student account is not available.');
+            $query->where('student_id', $studentId);
         }
 
         return ReceiptResource::collection($query->paginate($request->integer('per_page', 15)));
     }
 
-    public function show(OfficialReceipt $receipt)
+    public function show(Request $request, OfficialReceipt $receipt)
     {
+        if (PortalSession::role($request) === 'student') {
+            abort_unless((int) PortalSession::studentId($request) === (int) $receipt->student_id, 404);
+        }
+
         return new ReceiptResource($receipt->load('student'));
     }
 }

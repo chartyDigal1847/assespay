@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\BillingAccount;
 use App\Models\TuitionRecord;
 use App\Services\BillingAccountService;
+use App\Support\PortalSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class BillingRecordController extends Controller
 {
@@ -15,9 +15,11 @@ class BillingRecordController extends Controller
 
     public function index(Request $request)
     {
+        $studentId = $this->studentScopeId($request);
         $records = TuitionRecord::with(['student', 'billingAccount'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('student_id'), fn ($q) => $q->where('student_id', $request->student_id))
+            ->when($studentId, fn ($q) => $q->where('student_id', $studentId))
             ->latest()
             ->paginate($request->integer('per_page', 15));
 
@@ -54,8 +56,10 @@ class BillingRecordController extends Controller
         return response()->json(['data' => $record], 201);
     }
 
-    public function show(TuitionRecord $billingRecord)
+    public function show(Request $request, TuitionRecord $billingRecord)
     {
+        $this->ensureVisibleToSession($request, $billingRecord->student_id);
+
         return response()->json(['data' => $billingRecord->load(['student', 'billingAccount'])]);
     }
 
@@ -81,10 +85,33 @@ class BillingRecordController extends Controller
 
     public function accounts(Request $request)
     {
+        $studentId = $this->studentScopeId($request);
         $accounts = BillingAccount::with(['student', 'balance'])
             ->when($request->filled('student_id'), fn ($q) => $q->where('student_id', $request->student_id))
+            ->when($studentId, fn ($q) => $q->where('student_id', $studentId))
             ->paginate($request->integer('per_page', 15));
 
         return response()->json(['data' => $accounts]);
+    }
+
+    protected function studentScopeId(Request $request): ?int
+    {
+        if (PortalSession::role($request) !== 'student') {
+            return null;
+        }
+
+        $studentId = PortalSession::studentId($request);
+        abort_unless($studentId, 403, 'Student account is not available.');
+
+        return $studentId;
+    }
+
+    protected function ensureVisibleToSession(Request $request, int $studentId): void
+    {
+        if (PortalSession::role($request) !== 'student') {
+            return;
+        }
+
+        abort_unless((int) PortalSession::studentId($request) === $studentId, 404);
     }
 }

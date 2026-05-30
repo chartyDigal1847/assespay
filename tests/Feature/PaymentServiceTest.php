@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PaymentStatus;
+use App\Models\OfficialReceipt;
+use App\Models\Payment;
 use App\Models\Student;
 use App\Models\TuitionRecord;
 use App\Services\BalanceService;
@@ -270,5 +272,81 @@ class PaymentServiceTest extends TestCase
         $response->assertJsonPath('data.amount', 200);
         $this->assertSame(PaymentStatus::PartiallyPaid, $record->fresh()->status);
         $this->assertSame('29800.00', $account->balance->fresh()->current_balance);
+    }
+
+    public function test_student_api_cannot_read_another_students_financial_records(): void
+    {
+        $student = Student::create([
+            'portal_user_id' => '2',
+            'student_id' => 'DEORIS-2',
+            'name' => 'Student One',
+            'program' => 'Grade 7',
+            'year_level' => '7',
+            'email' => 'student.one@example.com',
+            'status' => 'active',
+        ]);
+        app(BillingAccountService::class)->ensureForStudent($student);
+
+        $other = Student::create([
+            'portal_user_id' => '3',
+            'student_id' => 'DEORIS-3',
+            'name' => 'Student Two',
+            'program' => 'Grade 8',
+            'year_level' => '8',
+            'email' => 'student.two@example.com',
+            'status' => 'active',
+        ]);
+        $otherAccount = app(BillingAccountService::class)->ensureForStudent($other);
+        $otherRecord = TuitionRecord::create([
+            'student_id' => $other->id,
+            'billing_account_id' => $otherAccount->id,
+            'school_year' => '2026-2027',
+            'term' => 'Annual',
+            'description' => 'Other student payable',
+            'tuition_amount' => 10000,
+            'misc_amount' => 0,
+            'other_amount' => 0,
+            'total_amount' => 10000,
+            'status' => PaymentStatus::Pending,
+        ]);
+        app(BalanceService::class)->recalculate($otherAccount);
+        $otherPayment = Payment::create([
+            'student_id' => $other->id,
+            'billing_account_id' => $otherAccount->id,
+            'tuition_record_id' => $otherRecord->id,
+            'amount' => 1000,
+            'method' => 'online',
+            'reference_number' => 'OTHER-REF-123',
+            'status' => PaymentStatus::Paid,
+            'submitted_by_portal_id' => '3',
+        ]);
+        $otherReceipt = OfficialReceipt::create([
+            'payment_id' => $otherPayment->id,
+            'student_id' => $other->id,
+            'receipt_number' => 'OR-OTHER-123',
+            'amount' => 1000,
+            'issued_by_portal_id' => '3',
+            'issued_at' => now(),
+        ]);
+
+        $studentSession = [
+            'sso_id' => '2',
+            'sso_name' => 'Student One',
+            'sso_email' => 'student.one@example.com',
+            'sso_role' => 'student',
+        ];
+
+        $this->withSession($studentSession)->getJson('/api/v1/payments/'.$otherPayment->id)->assertNotFound();
+        $this->withSession($studentSession)->getJson('/api/v1/receipts/'.$otherReceipt->id)->assertNotFound();
+        $this->withSession($studentSession)->getJson('/api/v1/balances/'.$otherAccount->balance->id)->assertNotFound();
+        $this->withSession($studentSession)->getJson('/api/v1/billing-records/'.$otherRecord->id)->assertNotFound();
+
+        $this->withSession($studentSession)
+            ->getJson('/api/v1/search?q=OTHER&type=all')
+            ->assertOk()
+            ->assertJsonCount(0, 'results.payments')
+            ->assertJsonCount(0, 'results.receipts')
+            ->assertJsonCount(0, 'results.billing')
+            ->assertJsonCount(0, 'results.students');
     }
 }

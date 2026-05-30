@@ -7,6 +7,7 @@ use App\Models\OfficialReceipt;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\TuitionRecord;
+use App\Support\PortalSession;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
@@ -20,32 +21,54 @@ class SearchController extends Controller
 
         $q = $request->input('q');
         $type = $request->input('type', 'all');
+        $studentScopeId = null;
+        if (PortalSession::role($request) === 'student') {
+            $studentScopeId = PortalSession::studentId($request);
+            abort_unless($studentScopeId, 403, 'Student account is not available.');
+        }
         $results = [];
 
         if (in_array($type, ['payments', 'all'], true)) {
             $results['payments'] = Payment::with('student')
-                ->where('receipt_number', 'like', "%{$q}%")
-                ->orWhere('reference_number', 'like', "%{$q}%")
-                ->orWhereHas('student', fn ($s) => $s->where('name', 'like', "%{$q}%")->orWhere('student_id', 'like', "%{$q}%"))
+                ->when($studentScopeId, fn ($query) => $query->where('student_id', $studentScopeId))
+                ->where(function ($query) use ($q) {
+                    $query->where('receipt_number', 'like', "%{$q}%")
+                        ->orWhere('reference_number', 'like', "%{$q}%")
+                        ->orWhereHas('student', fn ($student) => $student
+                            ->where('name', 'like', "%{$q}%")
+                            ->orWhere('student_id', 'like', "%{$q}%"));
+                })
                 ->limit(10)
                 ->get();
         }
 
         if (in_array($type, ['receipts', 'all'], true)) {
-            $results['receipts'] = OfficialReceipt::where('receipt_number', 'like', "%{$q}%")->limit(10)->get();
+            $results['receipts'] = OfficialReceipt::query()
+                ->when($studentScopeId, fn ($query) => $query->where('student_id', $studentScopeId))
+                ->where('receipt_number', 'like', "%{$q}%")
+                ->limit(10)
+                ->get();
         }
 
         if (in_array($type, ['billing', 'all'], true)) {
-            $results['billing'] = TuitionRecord::where('description', 'like', "%{$q}%")
-                ->orWhere('school_year', 'like', "%{$q}%")
+            $results['billing'] = TuitionRecord::query()
+                ->when($studentScopeId, fn ($query) => $query->where('student_id', $studentScopeId))
+                ->where(function ($query) use ($q) {
+                    $query->where('description', 'like', "%{$q}%")
+                        ->orWhere('school_year', 'like', "%{$q}%");
+                })
                 ->limit(10)
                 ->get();
         }
 
         if (in_array($type, ['students', 'all'], true)) {
-            $results['students'] = Student::where('name', 'like', "%{$q}%")
-                ->orWhere('student_id', 'like', "%{$q}%")
-                ->orWhere('email', 'like', "%{$q}%")
+            $results['students'] = Student::query()
+                ->when($studentScopeId, fn ($query) => $query->where('id', $studentScopeId))
+                ->where(function ($query) use ($q) {
+                    $query->where('name', 'like', "%{$q}%")
+                        ->orWhere('student_id', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%");
+                })
                 ->limit(10)
                 ->get();
         }

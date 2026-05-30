@@ -25,16 +25,17 @@ class PaymentController extends Controller
         }
         if (PortalSession::role($request) === 'student') {
             $studentId = PortalSession::studentId($request);
-            if ($studentId) {
-                $query->where('student_id', $studentId);
-            }
+            abort_unless($studentId, 403, 'Student account is not available.');
+            $query->where('student_id', $studentId);
         }
 
         return PaymentResource::collection($query->paginate($request->integer('per_page', 15)));
     }
 
-    public function show(Payment $payment)
+    public function show(Request $request, Payment $payment)
     {
+        $this->ensureVisibleToSession($request, $payment->student_id);
+
         return new PaymentResource($payment->load(['student', 'officialReceipt']));
     }
 
@@ -121,5 +122,14 @@ class PaymentController extends Controller
         $reversed = $this->payments->reverse($payment, PortalSession::portalId($request), $data['reason']);
 
         return new PaymentResource($reversed);
+    }
+
+    protected function ensureVisibleToSession(Request $request, int $studentId): void
+    {
+        if (PortalSession::role($request) !== 'student') {
+            return;
+        }
+
+        abort_unless((int) PortalSession::studentId($request) === $studentId, 404);
     }
 }
