@@ -2,8 +2,8 @@
 @section('title', 'Cashier')
 @section('nav')
     <a href="{{ route('assesspay.cashier') }}" class="active">Desk</a>
-    <a href="#detect-enrolled">Detect enrolled</a>
-    <a href="#payables">Payables</a>
+    <a href="{{ route('assesspay.cashier.payments') }}">All payments</a>
+    <a href="{{ route('assesspay.cashier.receipts') }}">Receipts</a>
     <a href="{{ route('assesspay.cashier.history') }}">History</a>
 @endsection
 @section('header')
@@ -29,8 +29,8 @@
     <div class="ap-section-note" style="color:#991b1b">{{ session('error') }}</div>
 @endif
 
-<div class="ap-section" id="detect-enrolled">
-    <h2>Detect enrolled student</h2>
+<div class="ap-section" id="create-payable">
+    <h2>Create payable</h2>
     <form class="ap-form" id="enrolledAssessmentForm" method="POST" action="{{ route('assesspay.cashier.payables') }}">
         @csrf
         <input type="hidden" name="source" value="deoris">
