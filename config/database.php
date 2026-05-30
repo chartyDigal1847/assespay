@@ -74,7 +74,7 @@ return [
             'url'         => env('ENROLLEASE_DB_URL'),
             'host'        => env('ENROLLEASE_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port'        => env('ENROLLEASE_DB_PORT', env('DB_PORT', '3306')),
-            'database'    => env('ENROLLEASE_DB_DATABASE', 'enrolldb'),
+            'database'    => env('ENROLLEASE_DB_DATABASE', 'enrollease'),
             'username'    => env('ENROLLEASE_DB_USERNAME', env('DB_USERNAME', 'root')),
             'password'    => env('ENROLLEASE_DB_PASSWORD', env('DB_PASSWORD', '')),
             'unix_socket' => env('ENROLLEASE_DB_SOCKET', env('DB_SOCKET', '')),

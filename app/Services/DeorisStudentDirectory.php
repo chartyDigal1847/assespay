@@ -3,50 +3,55 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class DeorisStudentDirectory
 {
     public function eligibleStudents(): array
     {
-        return DB::connection('deoris')
-            ->table('users')
-            ->select([
-                'id',
-                'name',
-                'email',
-                'student_number',
-                'admission_status',
-                'enrollment_status',
-            ])
-            ->where('role', 'student')
-            ->where('admission_status', 'approved')
-            ->where('enrollment_status', 'enrolled')
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($user) => $this->withEnrollment($this->normalize((array) $user)))
-            ->all();
+        return $this->safeDeoris(function () {
+            return DB::connection('deoris')
+                ->table('users')
+                ->select([
+                    'id',
+                    'name',
+                    'email',
+                    'student_number',
+                    'admission_status',
+                    'enrollment_status',
+                ])
+                ->where('role', 'student')
+                ->where('admission_status', 'approved')
+                ->where('enrollment_status', 'enrolled')
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($user) => $this->withEnrollment($this->normalize((array) $user)))
+                ->all();
+        }, []);
     }
 
     public function findEligible(string|int $id): ?array
     {
-        $user = DB::connection('deoris')
-            ->table('users')
-            ->select([
-                'id',
-                'name',
-                'email',
-                'student_number',
-                'admission_status',
-                'enrollment_status',
-            ])
-            ->where('id', $id)
-            ->where('role', 'student')
-            ->where('admission_status', 'approved')
-            ->where('enrollment_status', 'enrolled')
-            ->first();
+        return $this->safeDeoris(function () use ($id) {
+            $user = DB::connection('deoris')
+                ->table('users')
+                ->select([
+                    'id',
+                    'name',
+                    'email',
+                    'student_number',
+                    'admission_status',
+                    'enrollment_status',
+                ])
+                ->where('id', $id)
+                ->where('role', 'student')
+                ->where('admission_status', 'approved')
+                ->where('enrollment_status', 'enrolled')
+                ->first();
 
-        return $user ? $this->withEnrollment($this->normalize((array) $user)) : null;
+            return $user ? $this->withEnrollment($this->normalize((array) $user)) : null;
+        });
     }
 
     public function studentNumberFor(array $student): string
@@ -124,17 +129,19 @@ class DeorisStudentDirectory
             return [];
         }
 
-        return DB::connection('enrollease')
-            ->table('academic_terms')
-            ->select('school_year', 'semester')
-            ->whereNotNull('school_year')
-            ->whereNotNull('semester')
-            ->orderBy('school_year')
-            ->orderByRaw("FIELD(semester, '1st', '2nd', 'summer')")
-            ->get()
-            ->groupBy(fn ($term) => $this->normalizeSchoolYear((string) $term->school_year))
-            ->map(fn ($items) => $items->pluck('semester')->unique()->values()->all())
-            ->all();
+        return $this->safeEnrollease(function () {
+            return DB::connection('enrollease')
+                ->table('academic_terms')
+                ->select('school_year', 'semester')
+                ->whereNotNull('school_year')
+                ->whereNotNull('semester')
+                ->orderBy('school_year')
+                ->orderByRaw("FIELD(semester, '1st', '2nd', 'summer')")
+                ->get()
+                ->groupBy(fn ($term) => $this->normalizeSchoolYear((string) $term->school_year))
+                ->map(fn ($items) => $items->pluck('semester')->unique()->values()->all())
+                ->all();
+        }, []);
     }
 
     protected function withEnrollment(array $student): array
@@ -178,7 +185,52 @@ class DeorisStudentDirectory
             ->orderByDesc('e.updated_at')
             ->orderByDesc('e.id');
 
-        return $query->first();
+        try {
+            return $query->first();
+        } catch (\Throwable $e) {
+            Log::warning('[AssessPay] EnrollEase enrollment lookup failed', [
+                'message' => $e->getMessage(),
+                'student_id' => $student['id'] ?? null,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @template T
+     * @param  callable(): T  $callback
+     * @return T|null
+     */
+    protected function safeDeoris(callable $callback, mixed $default = null): mixed
+    {
+        try {
+            return $callback();
+        } catch (\Throwable $e) {
+            Log::warning('[AssessPay] DEORIS student directory unavailable', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return $default;
+        }
+    }
+
+    /**
+     * @template T
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    protected function safeEnrollease(callable $callback, mixed $default = []): mixed
+    {
+        try {
+            return $callback();
+        } catch (\Throwable $e) {
+            Log::warning('[AssessPay] EnrollEase directory unavailable', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return $default;
+        }
     }
 
     protected function hasEnrolleaseTable(string $table): bool
