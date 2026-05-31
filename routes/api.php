@@ -11,6 +11,10 @@ use App\Http\Controllers\Api\V1\ReceiptController;
 use App\Http\Controllers\Api\V1\SearchController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('v1')->group(function () {
+    Route::get('clearance/student/{studentNumber}', [ClearanceController::class, 'showForClearCheck']);
+});
+
 Route::prefix('v1')->middleware(['web', 'portal.session', 'api.log'])->group(function () {
     Route::get('payments', [PaymentController::class, 'index']);
     Route::get('payments/{payment}', [PaymentController::class, 'show']);

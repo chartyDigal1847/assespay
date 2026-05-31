@@ -20,6 +20,7 @@ return [
 
     'clearcheck' => [
         'api_url' => env('CLEARCHECK_API_URL', 'https://clearcheck.deoris.test/api/v1'),
+        'service_key' => env('CLEARCHECK_SERVICE_KEY', 'clearcheck-service'),
         'cache_ttl' => (int) env('CLEARCHECK_CACHE_TTL', 300),
     ],
 
