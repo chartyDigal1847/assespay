@@ -22,7 +22,6 @@
         <h1 class="ap-shell-title">AssessPay</h1>
         <p class="ap-shell-msg" id="assesspay-loader-msg">Opening your finance portal…</p>
         <p class="ap-shell-error" id="assesspay-loader-error" role="alert"></p>
-        <p class="ap-shell-hint">Secure sign-in via your DEORIS account</p>
     </div>
 </div>
 <script src="{{ rtrim(config('assesspay.portal.trusted_url', config('app.portal_url', 'https://deoris.test')), '/') }}/module-bridge.js"></script>
